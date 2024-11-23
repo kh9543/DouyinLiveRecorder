@@ -927,7 +927,9 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                                 continue
 
                             real_url = port_info.get('record_url')
-                            full_path = f'{default_path}/{platform}'
+                            utc8 = datetime.datetime.utcnow() + datetime.timedelta(hours=8)
+                            utc8_dstr = utc8.strftime("%Y-%m-%d")
+                            full_path = f'{default_path}/{utc8_dstr}/mp4/{platform}/{anchor_name}'
                             if real_url:
                                 now = datetime.datetime.today().strftime("%Y-%m-%d_%H-%M-%S")
                                 live_title = port_info.get('title')
@@ -939,20 +941,11 @@ def start_record(url_data: tuple, count_variable: int = -1) -> None:
                                 try:
                                     if len(video_save_path) > 0:
                                         if not video_save_path.endswith(('/', '\\')):
-                                            full_path = f'{video_save_path}/{platform}'
+                                            full_path = f'{video_save_path}/{utc8_dstr}/mp4/{platform}/{anchor_name}'
                                         else:
-                                            full_path = f'{video_save_path}{platform}'
+                                            full_path = f'{video_save_path}{utc8_dstr}/mp4/{platform}/{anchor_name}'
 
                                     full_path = full_path.replace("\\", '/')
-                                    if folder_by_author:
-                                        full_path = f'{full_path}/{anchor_name}'
-                                    if folder_by_time:
-                                        full_path = f'{full_path}/{now[:10]}'
-                                    if folder_by_title and port_info.get('title'):
-                                        if folder_by_time:
-                                            full_path = f'{full_path}/{live_title}_{anchor_name}'
-                                        else:
-                                            full_path = f'{full_path}/{now[:10]}_{live_title}'
                                     if not os.path.exists(full_path):
                                         os.makedirs(full_path)
                                 except Exception as e:
