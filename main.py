@@ -34,6 +34,7 @@ from douyinliverecorder import utils
 from msg_push import (
     dingtalk, xizhi, tg_bot, send_email, bark, ntfy
 )
+from filelock import FileLock
 
 version = "v4.0.1"
 platforms = ("\n国内站点：抖音|快手|虎牙|斗鱼|YY|B站|小红书|bigo|blued|网易CC|千度热播|猫耳FM|Look|TwitCasting|百度|微博|"
@@ -373,15 +374,27 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
     return_code = process.returncode
     stop_time = time.strftime('%Y-%m-%d %H:%M:%S')
     if return_code == 0:
-        if converts_to_mp4 and save_type == 'TS':
+        threads = []
+        save_file_paths = []
+        if ts_to_mp4 and save_type == 'TS':
             if split_video_by_time:
                 file_paths = utils.get_file_paths(os.path.dirname(save_file_path))
                 prefix = os.path.basename(save_file_path).rsplit('_', maxsplit=1)[0]
                 for path in file_paths:
                     if prefix in path:
-                        threading.Thread(target=converts_mp4, args=(path, delete_origin_file)).start()
+                        thread = threading.Thread(target=converts_mp4, args=(path, delete_origin_file))
+                        thread.start()
+                        threads.append(thread)
+                        save_file_paths.append(path.rsplit('.', maxsplit=1)[0] + ".mp4")
             else:
-                threading.Thread(target=converts_mp4, args=(save_file_path, delete_origin_file)).start()
+                thread = threading.Thread(target=converts_mp4, args=(save_file_path, delete_origin_file))
+                thread.start()
+                threads.append(thread)
+                save_file_paths.append(save_file_path.rsplit('.', maxsplit=1)[0] + ".mp4")
+
+        for thread in threads:
+            thread.join()
+        write_file_paths(save_file_paths, "./filepaths.txt")
         print(f"\n{record_name} {stop_time} 直播录制完成\n")
 
         if script_command:
@@ -412,6 +425,22 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
     recording.discard(record_name)
     return False
 
+def write_file_paths(filepaths: list[str], output_file: str) -> None:
+    """
+    Creates a file if it doesn't exist and writes the given file paths to it.
+
+    :param filepaths: List of file paths to write to the file.
+    :param output_file: The path to the output file.
+    """
+    # Ensure the directory for the output file exists
+    os.makedirs(os.path.dirname(output_file), exist_ok=True)
+    lock_path = f"{output_file}.lock"
+    lock = FileLock(lock_path)
+    
+    with lock:
+        with open(output_file, 'a') as file:
+            for path in filepaths:
+                file.write(f"{path}\n")
 
 def clean_name(input_text):
     cleaned_name = re.sub(rstr, "_", input_text.strip()).strip('_')
