@@ -376,7 +376,7 @@ def check_subprocess(record_name: str, record_url: str, ffmpeg_command: list, sa
     if return_code == 0:
         threads = []
         save_file_paths = []
-        if ts_to_mp4 and save_type == 'TS':
+        if converts_to_mp4 and save_type == 'TS':
             if split_video_by_time:
                 file_paths = utils.get_file_paths(os.path.dirname(save_file_path))
                 prefix = os.path.basename(save_file_path).rsplit('_', maxsplit=1)[0]
@@ -436,6 +436,7 @@ def write_file_paths(filepaths: list[str], output_file: str) -> None:
     os.makedirs(os.path.dirname(output_file), exist_ok=True)
     lock_path = f"{output_file}.lock"
     lock = FileLock(lock_path)
+    os.chmod(lock_path, 0o666)
     
     with lock:
         with open(output_file, 'a') as file:
